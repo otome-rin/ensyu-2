@@ -7,25 +7,36 @@ import matplotlib.pyplot as plt
 from scipy.spatial.distance import cosine
 
 def compare_doraemon(audio_path1,audio_path2):
+    #重みの決定
+    pitch_W, intonation_W, mfcc_W, rhythm_W = weight_doraemon()
 
-    compare_f0(audio_path1, audio_path2)
-    print("A")
-        # 基本周波数の類似度
-    pitch_similarity = compare_f0(audio_path1, audio_path2)
-    print(f"Pitch Similarity (F0): {pitch_similarity}")
+    #ピッチの得点
+    pitch_score = compare_pitch(audio_path1, audio_path2) * pitch_W
+    print(f"Pitch Score: {pitch_score}")
 
-    # 抑揚の類似度
-    intonation_similarity = compare_intonation(audio_path1, audio_path2)
-    print(f"Intonation Similarity (Energy): {intonation_similarity}")
+    # 抑揚の得点
+    intonation_score = compare_intonation(audio_path1, audio_path2) * intonation_W
+    print(f"Intonation Score: {intonation_score}")
 
-    similarity_score00 = evaluate_similarity(audio_path1, audio_path2)
-    print(f"Similarity Score: {similarity_score00}")
+    #mfccの得点
+    mfcc_score = evaluate_similarity(audio_path1, audio_path2) * mfcc_W
+    print(f"Voice Quality Score: {mfcc_score}")
 
-    ry,similarity = rhythm_compare(audio_path1,audio_path2)
-    print(f"リズムの類似度: {ry}")
-    print(f"リズムの類似度？: {similarity}")
+    #リズムの得点
+    rhythm_score = rhythm_compare(audio_path1,audio_path2) * rhythm_W
+    print(f"Rhythm Score: {rhythm_score}")
 
-def compare_f0(audio_path1, audio_path2):
+    Score = pitch_score + intonation_score + mfcc_score + rhythm_score
+    print(f"Score: {Score}")
+
+def weight_doraemon():
+    pitch_W = 30
+    intonation_W = 20
+    mfcc_W = 30
+    rhythm_W = 20
+    return pitch_W, intonation_W, mfcc_W, rhythm_W
+
+def compare_pitch(audio_path1, audio_path2):
     # 音声の基本周波数（F0）を抽出
     y1, sr1 = librosa.load(audio_path1)
     y2, sr2 = librosa.load(audio_path2)
@@ -39,10 +50,18 @@ def compare_f0(audio_path1, audio_path2):
     f0_2 = f0_2[~np.isnan(f0_2)]
     # fastdtwを使用して基本周波数の動的時間伸縮距離を計算
     distance, _ = fastdtw(f0_1, f0_2)
+
+    pitch_score = 0
+
+    if distance >= 10000:
+        pitch_score = 0
+    else:
+        pitch_score = 1 - distance/10000
+
     if distance == 0:
       return False
     else:
-      return distance
+      return pitch_score
 
 # 抑揚（ピッチとエネルギー変動）の類似度を計算する関数
 def compare_intonation(audio_path1, audio_path2):
@@ -58,6 +77,13 @@ def compare_intonation(audio_path1, audio_path2):
       rms_2 = rms_2 / np.max(rms_2)
     # fastdtwを使用して抑揚の動的時間伸縮距離を計算
     distance, _ = fastdtw(rms_1, rms_2)
+
+    intonation_score = 0
+
+    if distance >= 16:
+        intonation_score = 0
+    else:
+        intonation_score = 1 - distance/16
     return distance
 
 def extract_mfcc(file_path, n_mfcc=13):
@@ -84,6 +110,12 @@ def evaluate_similarity(file1, file2):
     # コサイン類似度を計算
     similarity = cosine_similarity(mfcc1, mfcc2)
 
+    mfcc_score = 0
+
+    if similarity >= 90000:
+        mfcc_score = 0
+    else:
+        mfcc_score = 1 - similarity/90000
     return similarity
 
 # 音声データをロードする関数
@@ -120,10 +152,12 @@ def rhythm_similarity(correlation):
     # 類似度（最大相互相関値を基準にする）
     similarity = max_correlation
     return similarity
+
 def calculate_cross_correlation(wave1, wave2):
     # 相互相関を計算
     correlation = correlate(wave1, wave2, mode='full')
     return correlation
+
 def rhythm_compare(audio_path1, audio_path2):
     audio1 = load_audio(audio_path1)
     audio2 = load_audio(audio_path2)
@@ -141,12 +175,14 @@ def rhythm_compare(audio_path1, audio_path2):
       print("False")
       return "False"
      #テンポの類似性
-    ry=0
-    for i in range(len(F)-1):
-      ry+=abs(F[i+1][0]-F[i][0]-F[i+1][1]+F[i][1])
-    ry=ry/len(F)
-    # 波1と波2の相互相関を計算
-    correlation = calculate_cross_correlation(audio1, audio2)
-    # リズムの類似度を計算
-    similarity = rhythm_similarity(correlation)
-    return ry, similarity
+    pa=0
+    er=0
+    s=0
+    l=(F[len(F)-1][0]**2+F[len(F)-1][1]**2)**0.5
+    for co in range(len(F)-1):
+      er=((F[co+1][0]-F[co][0])+(F[co+1][1]-F[co][1]))**0.5
+      pa+=er
+    ry=(pa-l)/(F[len(F)-1][0]+F[len(F)-1][1]-l)
+
+    rhythm_score = 1 - ry
+    return rhythm_score
