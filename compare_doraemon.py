@@ -8,33 +8,33 @@ from scipy.spatial.distance import cosine
 
 def compare_doraemon(audio_path1,audio_path2):
     #重みの決定
-    pitch_W, intonation_W, mfcc_W, rhythm_W = weight_doraemon()
+    pitch_W, intonation_W, mfcc_W, rhythm_W, speed_W = weight_doraemon()
 
     #ピッチの得点
     pitch_score = compare_pitch(audio_path1, audio_path2) * pitch_W
-    print(f"Pitch Score: {pitch_score}")
 
     # 抑揚の得点
     intonation_score = compare_intonation(audio_path1, audio_path2) * intonation_W
-    print(f"Intonation Score: {intonation_score}")
 
     #mfccの得点
     mfcc_score = evaluate_similarity(audio_path1, audio_path2) * mfcc_W
-    print(f"Voice Quality Score: {mfcc_score}")
 
     #リズムの得点
     rhythm_score = rhythm_compare(audio_path1,audio_path2) * rhythm_W
-    print(f"Rhythm Score: {rhythm_score}")
 
-    Score = pitch_score + intonation_score + mfcc_score + rhythm_score
-    print(f"Score: {Score}")
+    speed_score = speed_compare(audio_path1,audio_path2) * speed_W
+    
+    Score = pitch_score + intonation_score + mfcc_score + rhythm_score + speed_score
+
+    return pitch_score,intonation_score,mfcc_score,rhythm_score,speed_score,Score
 
 def weight_doraemon():
     pitch_W = 30
     intonation_W = 20
     mfcc_W = 30
-    rhythm_W = 20
-    return pitch_W, intonation_W, mfcc_W, rhythm_W
+    rhythm_W = 10
+    speed_W = 10
+    return pitch_W, intonation_W, mfcc_W, rhythm_W, speed_W
 
 def compare_pitch(audio_path1, audio_path2):
     # 音声の基本周波数（F0）を抽出
@@ -55,8 +55,10 @@ def compare_pitch(audio_path1, audio_path2):
 
     if distance >= 10000:
         pitch_score = 0
+    elif distance <= 2000:
+        pitch_score = 1
     else:
-        pitch_score = 1 - distance/10000
+        pitch_score = 1.25 - distance/8000
 
     if distance == 0:
       return False
@@ -80,11 +82,13 @@ def compare_intonation(audio_path1, audio_path2):
 
     intonation_score = 0
 
-    if distance >= 16:
+    if distance >= 30:
         intonation_score = 0
+    elif distance <= 5:
+        intonation_score = 1
     else:
-        intonation_score = 1 - distance/16
-    return distance
+        intonation_score = 1.2 - distance/25
+    return intonation_score
 
 def extract_mfcc(file_path, n_mfcc=13):
     # 音声ファイルを読み込み
@@ -114,8 +118,10 @@ def evaluate_similarity(file1, file2):
 
     if similarity >= 90000:
         mfcc_score = 0
+    elif similarity <= 30000:
+        mfcc_score = 1
     else:
-        mfcc_score = 1 - similarity/90000
+        mfcc_score = 1.5 - similarity/60000
     return similarity
 
 # 音声データをロードする関数
@@ -124,12 +130,12 @@ def load_audio(file_path, sr=22050):
     return audio
 
 # ゼロクロス率を計算する関数
-def compute_zero_crossing_rate(audio, frame_length=2048, hop_length=512):
-    return librosa.feature.zero_crossing_rate(audio, frame_length=frame_length, hop_length=hop_length)
+def compute_zero_crossing_rate(audio_path, frame_length=2048, hop_length=512):
+    return librosa.feature.zero_crossing_rate(audio_path, frame_length=frame_length, hop_length=hop_length)
 
 # テンポ（BPM）を計算する関数
-def compute_tempo(audio, sr=22050):
-    onset_env = librosa.onset.onset_strength(y=audio, sr=sr)
+def compute_tempo(audio_path, sr=22050):
+    onset_env = librosa.onset.onset_strength(y=audio_path, sr=sr)
     tempo, _ = librosa.beat.beat_track(onset_envelope=onset_env, sr=sr)
     return tempo
 
@@ -184,5 +190,30 @@ def rhythm_compare(audio_path1, audio_path2):
       pa+=er
     ry=(pa-l)/(F[len(F)-1][0]+F[len(F)-1][1]-l)
 
-    rhythm_score = 1 - ry
+    if ry >= 0.8:
+       rhythm_score = 0
+    elif ry <= 0.2:
+       rhythm_score = 1
+    else:
+       rhythm_score = 4/3 - ry/0.6
     return rhythm_score
+
+def speed_compare(audio_path1, audio_path2):
+    #喋る速さ測定
+    audio1 = load_audio(audio_path1)
+    audio2 = load_audio(audio_path2)
+
+    sp=0
+    if(len(audio1))>(len(audio2) - 11025):
+      sp=1-(len(audio2) - 11025)/(len(audio1))
+    if(len(audio2) - 11025)>=(len(audio1)):
+      sp=1-(len(audio1))/(len(audio2) - 11025)
+
+    sp_score = 0
+    if sp >= 0.6:
+       sp_score = 0
+    elif sp <= 0.1:
+       sp_score = 1
+    else:
+       sp_score = 1.2 - 2*sp
+    return sp_score
