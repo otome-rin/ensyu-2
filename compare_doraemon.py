@@ -5,36 +5,46 @@ from scipy.signal import correlate
 from scipy.spatial.distance import euclidean
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import cosine
+from librosa.sequence import dtw
 
-def compare_doraemon(audio_path1,audio_path2):
-    #重みの決定
-    pitch_W, intonation_W, mfcc_W, rhythm_W, speed_W = weight_doraemon()
-
-    #ピッチの得点
-    pitch_score = compare_pitch(audio_path1, audio_path2) * pitch_W
-
-    # 抑揚の得点
-    intonation_score = compare_intonation(audio_path1, audio_path2) * intonation_W
-
-    #mfccの得点
-    mfcc_score = evaluate_similarity(audio_path1, audio_path2) * mfcc_W
-
-    #リズムの得点
-    rhythm_score = rhythm_compare(audio_path1,audio_path2) * rhythm_W
-
-    speed_score = speed_compare(audio_path1,audio_path2) * speed_W
-    
-    Score = pitch_score + intonation_score + mfcc_score + rhythm_score + speed_score
-
-    return pitch_score,intonation_score,mfcc_score,rhythm_score,speed_score,Score
-
-def weight_doraemon():
+def doraemon_data():
+    target_files = []
+    target_files.append(r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\doraemon01.mp3")
+    target_files.append(r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\doraemon02.mp3")
+    target_files.append(r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\doraemon03.mp3")
+    target_files.append(r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\doraemon04.mp3")
+    target_files.append(r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\doraemon05.mp3")
     pitch_W = 30
     intonation_W = 20
     mfcc_W = 30
     rhythm_W = 10
     speed_W = 10
-    return pitch_W, intonation_W, mfcc_W, rhythm_W, speed_W
+    Weights = [pitch_W, intonation_W, mfcc_W, rhythm_W, speed_W]
+    return target_files,Weights
+
+def compare_doraemon(audio_path1,audio_path2,Weights):
+
+    #ピッチの得点
+    pitch_score = compare_pitch(audio_path1, audio_path2) * Weights[0]
+
+    # 抑揚の得点
+    intonation_score = compare_intonation(audio_path1, audio_path2) * Weights[1]
+
+    #mfccの得点
+    mfcc_score = evaluate_similarity(audio_path1, audio_path2) * Weights[2]
+
+    #リズムの得点
+    rhythm_score = rhythm_compare(audio_path1,audio_path2) * Weights[3]
+
+    #速度の得点
+    speed_score = speed_compare(audio_path1,audio_path2) * Weights[4]
+    
+    #総合得点の計算
+    Score = pitch_score + intonation_score + mfcc_score + rhythm_score + speed_score
+
+    return pitch_score,intonation_score,mfcc_score,rhythm_score,speed_score,Score
+
+
 
 def compare_pitch(audio_path1, audio_path2):
     # 音声の基本周波数（F0）を抽出
@@ -97,13 +107,18 @@ def extract_mfcc(file_path, n_mfcc=13):
     # MFCC特徴量を抽出
     mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=n_mfcc)
 
-    # フレームごとの平均値を計算して特徴ベクトルを生成
-    mfcc_mean = np.mean(mfcc.T, axis=0)
-    return mfcc_mean
+    return mfcc
 
 # コサイン類似度を計算する関数
 def cosine_similarity(vec1, vec2):
     return 1 - cosine(vec1, vec2)
+
+def dtw_distance(mfcc1, mfcc2):
+    # DTWを計算
+    D, wp = dtw(X=mfcc1, Y=mfcc2, metric='euclidean')
+
+    # 最小コストを返す
+    return D[-1, -1]
 
 # 話者の類似性を評価する関数
 def evaluate_similarity(file1, file2):
@@ -112,17 +127,17 @@ def evaluate_similarity(file1, file2):
     mfcc2 = extract_mfcc(file2)
 
     # コサイン類似度を計算
-    similarity = cosine_similarity(mfcc1, mfcc2)
+    distance = dtw_distance(mfcc1, mfcc2)
 
     mfcc_score = 0
 
-    if similarity >= 90000:
+    if distance>= 90000:
         mfcc_score = 0
-    elif similarity <= 30000:
+    elif distance <= 30000:
         mfcc_score = 1
     else:
-        mfcc_score = 1.5 - similarity/60000
-    return similarity
+        mfcc_score = 1.5 - distance/60000
+    return mfcc_score
 
 # 音声データをロードする関数
 def load_audio(file_path, sr=22050):
