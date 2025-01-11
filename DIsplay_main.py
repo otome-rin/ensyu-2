@@ -5,6 +5,7 @@ import sounddevice as sd
 import numpy as np
 from record_audio import record_audio
 from compare_audio import compare_audio
+from compare_audio import rhythm_compare
 import matplotlib.pyplot as plt
 import soundfile as sf
 from PIL import Image, ImageTk
@@ -15,8 +16,8 @@ from matplotlib import rcParams
 from matplotlib import font_manager
 
 # 録音を保存するファイル名
-recorded_file = r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\録音データ\recorded_audio.wav"  # 保存したいパスを指定
-save_file = r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\画像データ\save_plot.png"  # 保存したいパスを指定
+recorded_file = r"C:\Users\tamur\OneDrive\デスクトップ\dio\recorded_audio.wav"  # 保存したいパスを指定
+save_file = r"C:\Users\tamur\OneDrive\デスクトップ\dio\save_plot.png"  # 保存したいパスを指定
 
 
 
@@ -36,57 +37,57 @@ status_label = tk.Label(root, text="", font=("Arial", 30))
 
 def doraemon_data():
     target_files = []
-    target_files.append(r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\doraemon01.wav")
-    target_files.append(r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\doraemon02.wav")
-    target_files.append(r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\doraemon03.wav")
-    target_files.append(r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\doraemon04.wav")
-    target_files.append(r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\doraemon05.wav")
+    target_files.append(r"C:\Users\tamur\OneDrive\デスクトップ\dio\doraemon01.wav")
+    target_files.append(r"C:\Users\tamur\OneDrive\デスクトップ\dio\doraemon02.wav")
+    target_files.append(r"C:\Users\tamur\OneDrive\デスクトップ\dio\doraemon03.wav")
+    target_files.append(r"C:\Users\tamur\OneDrive\デスクトップ\dio\doraemon04.wav")
+    target_files.append(r"C:\Users\tamur\OneDrive\デスクトップ\dio\doraemon05.wav")
     pitch_W = 30
     intonation_W = 20
     mfcc_W = 30
     rhythm_W = 10
     speed_W = 10
     Weights = [pitch_W, intonation_W, mfcc_W, rhythm_W, speed_W]
-    wave_data = r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\画像データ\doraemon_wave.png"  # 保存したいパスを指定
+    wave_data = r"C:\Users\tamur\OneDrive\デスクトップ\dio_G\doraemon_wave.png"  # 保存したいパスを指定
 
     return target_files,Weights,wave_data
 
 def anpanman_data():
     target_files = []
-    target_files.append(r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\anpanman01.wav")
-    target_files.append(r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\anpanman02.wav")
-    target_files.append(r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\anpanman03.wav")
-    target_files.append(r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\anpanman04.wav")
-    target_files.append(r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\anpanman05.wav")
+    target_files.append(r"C:\Users\tamur\OneDrive\デスクトップ\dio\anpanman01.wav")
+    target_files.append(r"C:\Users\tamur\OneDrive\デスクトップ\dio\anpanman02.wav")
+    target_files.append(r"C:\Users\tamur\OneDrive\デスクトップ\dio\anpanman03.wav")
+    target_files.append(r"C:\Users\tamur\OneDrive\デスクトップ\dio\anpanman04.wav")
+    target_files.append(r"C:\Users\tamur\OneDrive\デスクトップ\dio\anpanman05.wav")
     pitch_W = 30
     intonation_W = 20
     mfcc_W = 30
     rhythm_W = 10
     speed_W = 10
     Weights = [pitch_W, intonation_W, mfcc_W, rhythm_W, speed_W]
-    wave_data = r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\画像データ\anpanman_wave.png"  # 保存したいパスを指定
+    wave_data = r"C:\Users\tamur\OneDrive\デスクトップ\dio_G\anpanman_wave.png"  # 保存したいパスを指定
 
     return target_files,Weights,wave_data
 
 def sazae_data():
     target_files = []
-    target_files.append(r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\sazae01.wav")
-    target_files.append(r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\sazae02.wav")
-    target_files.append(r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\sazae03.wav")
-    target_files.append(r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\sazae04.wav")
-    target_files.append(r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\sazae05.wav")
+    target_files.append(r"C:\Users\tamur\OneDrive\デスクトップ\dio\sazae01.wav")
+    target_files.append(r"C:\Users\tamur\OneDrive\デスクトップ\dio\sazae02.wav")
+    target_files.append(r"C:\Users\tamur\OneDrive\デスクトップ\dio\sazae03.wav")
+    target_files.append(r"C:\Users\tamur\OneDrive\デスクトップ\dio\sazae04.wav")
+    target_files.append(r"C:\Users\tamur\OneDrive\デスクトップ\dio\sazae05.wav")
     pitch_W = 30
     intonation_W = 20
     mfcc_W = 30
     rhythm_W = 10
     speed_W = 10
     Weights = [pitch_W, intonation_W, mfcc_W, rhythm_W, speed_W]
-    wave_data = r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\画像データ\sazae_wave.png"  # 保存したいパスを指定
+    wave_data = r"C:\Users\tamur\OneDrive\デスクトップ\dio_G\sazae_wave.png"  # 保存したいパスを指定
 
     return target_files,Weights,wave_data
 
 target_files, Weights, wave_file = doraemon_data()
-file_path = r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\doraemon01.wav"
+file_path = r"C:\Users\tamur\OneDrive\デスクトップ\dio\doraemon01.wav"
 
 def play():    # Pygameの初期化
     pygame.init()
@@ -139,7 +140,7 @@ def show_select_screen():
 def set_doraemon():
     global target_files, Weights, wave_file,file_path
     target_files, Weights, wave_file = doraemon_data()
-    file_path = r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\doraemon01.wav"
+    file_path = r"C:\Users\tamur\OneDrive\デスクトップ\dio\doraemon01.wav"
   
     clear_screen()
     label = tk.Label(root, text="ドラえもん", font=("HGsoeikakupoptai", 40))
@@ -155,7 +156,7 @@ def set_doraemon():
 def set_anpanman():
     global target_files, Weights, wave_file, file_path
     target_files, Weights, wave_file = anpanman_data()
-    file_path = r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\anpanman01.wav"
+    file_path = r"C:\Users\tamur\OneDrive\デスクトップ\dio\anpanman01.wav"
 
 
     clear_screen()
@@ -172,7 +173,7 @@ def set_anpanman():
 def set_sazae():
     global target_files, Weights, wave_file, file_path
     target_files, Weights, wave_file = sazae_data()
-    file_path = r"C:\Users\rinri\OneDrive - NITech\デスクトップ\メディア系演習Ⅱ\比較元音声ファイル\sazae01.wav"
+    file_path = r"C:\Users\tamur\OneDrive\デスクトップ\dio\sazae01.wav"
 
 
     clear_screen()
@@ -229,22 +230,20 @@ def compare(target_files, Weights):
     pitch_scores = []
     intonation_scores = []
     voice_quality_scores = []
-    rhythm_scores = []
     speed_scores = []
     for target_file in target_files: 
-        p,i,v,r,sp,sc =compare_audio(target_file, recorded_file,Weights)
+        p,i,v,sp,sc =compare_audio(target_file, recorded_file,Weights)
         pitch_scores.append(p)
         intonation_scores.append(i)
         voice_quality_scores.append(v)
-        rhythm_scores.append(r)
         speed_scores.append(sp)
 
     pitch_max = max(pitch_scores)
     intonation_max = max(intonation_scores)
     voice_quality_max = max(voice_quality_scores)
-    rhythm_max = max(rhythm_scores)
     speed_max = max(speed_scores)
-    Score = pitch_max + intonation_max + voice_quality_max + rhythm_max + speed_max
+    rhythm_score = rhythm_compare(target_files[0],recorded_file)
+    Score = pitch_max + intonation_max + voice_quality_max + rhythm_score + speed_max
     '''
     print(f"Pitch Score: {round(pitch_max,3)} / {Weights[0]}")
     print(f"Volume Score: {round(intonation_max,3)} / {Weights[1]}")
@@ -260,7 +259,7 @@ def compare(target_files, Weights):
         pitch_max,
         intonation_max,
         voice_quality_max,
-        rhythm_max,
+        rhythm_score,
         speed_max
     ]
     plot_range = [

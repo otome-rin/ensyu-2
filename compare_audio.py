@@ -3,6 +3,10 @@ import numpy as np
 from fastdtw import fastdtw
 from scipy.spatial.distance import cosine
 from librosa.sequence import dtw
+import whisper
+import warnings
+# 警告を無視
+warnings.filterwarnings("ignore", category=UserWarning)
 
 
 def compare_audio(audio_path1,audio_path2,Weights):
@@ -16,16 +20,14 @@ def compare_audio(audio_path1,audio_path2,Weights):
     #mfccの得点
     mfcc_score = evaluate_similarity(audio_path1, audio_path2) * Weights[2]
 
-    #リズムの得点
-    rhythm_score = rhythm_compare(audio_path1,audio_path2) * Weights[3]
 
     #速度の得点
     speed_score = speed_compare(audio_path1,audio_path2) * Weights[4]
     
     #総合得点の計算
-    Score = pitch_score + intonation_score + mfcc_score + rhythm_score + speed_score
+    Score = pitch_score + intonation_score + mfcc_score + speed_score
 
-    return pitch_score,intonation_score,mfcc_score,rhythm_score,speed_score,Score
+    return pitch_score,intonation_score,mfcc_score,speed_score,Score
 
 def compare_pitch(audio_path1, audio_path2):
     # 音声の基本周波数（F0）を抽出
@@ -134,38 +136,48 @@ def load_audio(file_path, sr=22050):
     return audio
 
 def rhythm_compare(audio_path1, audio_path2):
-    audio1 = load_audio(audio_path1)
-    audio2 = load_audio(audio_path2)
-    Max_f0 = 500
-    Min_f0 = 100
-    f1, _, _ = librosa.pyin(audio1, fmin = Min_f0, fmax = Max_f0)
-    f2, _, _ = librosa.pyin(audio2, fmin = Min_f0, fmax = Max_f0)
+   # Whisperのモデルをロード
+    model = whisper.load_model("turbo")
+    
+    # 音声ファイルをテキストに変換し、詳細情報を取得
+    result1 = model.transcribe(audio_path1, language="ja", word_timestamps=True)
+    result2 = model.transcribe(audio_path2, language="ja", word_timestamps=True)
+    
+    # 各セグメント（音声の区間）を取り出し、単語ごとの情報を取得
+    word_durations1 = []
+    for segment in result1['segments']:
+        for word_info in segment['words']:
+            word = word_info['word']
+            duration = word_info['end'] - word_info['start']
+            word_durations1.append((word, duration))
+    
+    word_durations2 = []
+    for segment in result2['segments']:
+        for word_info in segment['words']:
+            word = word_info['word']
+            duration = word_info['end'] - word_info['start']
+            word_durations2.append((word, duration))
 
-    # NaNを除去
-    f1 = f1[~np.isnan(f1)]
-    f2 = f2[~np.isnan(f2)]
-    # fastdtwを使用して基本周波数の動的時間伸縮距離を計算
-    _,F=fastdtw(f1,f2)
-    if(len(F)==0):
-      print("False")
-      return "False"
-     #テンポの類似性
-    pa=0
-    er=0
-    s=0
-    l=(F[len(F)-1][0]**2+F[len(F)-1][1]**2)**0.5
-    for co in range(len(F)-1):
-      er=((F[co+1][0]-F[co][0])+(F[co+1][1]-F[co][1]))**0.5
-      pa+=er
-    ry=(pa-l)/(F[len(F)-1][0]+F[len(F)-1][1]-l)
+    # 合計発話時間
+    total_duration1 = sum(duration for _, duration in word_durations1)
+    total_duration2 = sum(duration for _, duration in word_durations2)
 
-    if ry >= 0.8:
-       rhythm_score = 0
-    elif ry <= 0.2:
-       rhythm_score = 1
-    else:
-       rhythm_score = 4/3 - ry/0.6
-    return rhythm_score
+    # 発話時間の比率を計算
+    duration_ratios1 = [(word, duration / total_duration1) for word, duration in word_durations1]
+    duration_ratios2 = [(word, duration / total_duration2) for word, duration in word_durations2]
+    
+    # リズムスコアを計算
+    def calculate_score(ratios1, ratios2):
+        score = 0
+        min_len = min(len(ratios1), len(ratios2))
+        for i in range(min_len):
+            ratio1 = ratios1[i][1]
+            ratio2 = ratios2[i][1]
+            score += 1.1* min(ratio1, ratio2) / max(ratio1, ratio2) / min_len
+        return min(score, 1.0)  # スコアを最大1に制限
+
+    return calculate_score(duration_ratios1, duration_ratios2)
+
 
 def speed_compare(audio_path1, audio_path2):
     #喋る速さ測定
