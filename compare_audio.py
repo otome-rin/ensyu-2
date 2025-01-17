@@ -198,3 +198,119 @@ def speed_compare(audio_path1, audio_path2):
     else:
        sp_score = 1.2 - 2*sp
     return sp_score
+
+def split_data(data, n_parts):
+    """時系列データを指定した部分数に分割"""
+    length = len(data)
+    split_size = length // n_parts
+    splits = [data[i * split_size:(i + 1) * split_size] for i in range(n_parts - 1)]
+    splits.append(data[(n_parts - 1) * split_size:])  # 残りを最後に追加
+    return splits
+
+def calculate_dtw_similarity(data1, data2):
+    """DTW距離を計算"""
+    distance, path = fastdtw(data1, data2)
+    return distance, path
+
+def split_data_by_dtw_path(path, n_parts, data2):
+    """DTWの対応パスからdata2を分割"""
+    path_points = [p[1] for p in path]  # data2のインデックスを抽出
+    segment_size = len(path_points) // n_parts
+    split_indices = [path_points[i * segment_size] for i in range(1, n_parts)]
+    split_indices = sorted(set(split_indices))  # 重複を排除してソート
+
+    segments = []
+    start_idx = 0
+    for idx in split_indices:
+        segments.append(data2[start_idx:idx + 1])
+        start_idx = idx + 1
+    segments.append(data2[start_idx:])
+    return segments
+
+def calculate_similarity(distance, max_distance):
+    """距離を類似度（0から1の範囲）に変換"""
+    return max(0, 1 - (distance / max_distance))
+
+def evaluate_segments(data1, data2, n_parts):
+    """時系列データを分割して各部分の類似度を計算"""
+    segments1 = split_data(data2, n_parts)
+
+    # 全体のDTWパスを計算し、それを基にdata2を分割
+    _, path = calculate_dtw_similarity(data1, data2)
+    segments2 = split_data_by_dtw_path(path, n_parts, data2)
+
+    results = []
+    for i, (seg1, seg2) in enumerate(zip(segments1, segments2)):
+        distance, path = calculate_dtw_similarity(seg1, seg2)
+        results.append((i + 1, distance, path))
+    return results
+
+def segmented_pitch_and_intonation(audio_path1, audio_path2):
+    # ピッチ（F0）とエネルギー（RMS）の変動を抽出
+    y1, sr1 = librosa.load(audio_path1)
+    y2, sr2 = librosa.load(audio_path2)
+
+    rms_1 = librosa.feature.rms(y=y1)[0]
+    rms_2 = librosa.feature.rms(y=y2)[0]
+
+    Max_f0 = 500
+    Min_f0 = 100
+    f0_1, _, _ = librosa.pyin(y1, fmin = Min_f0, fmax = Max_f0)
+    f0_2, _, _ = librosa.pyin(y2, fmin = Min_f0, fmax = Max_f0)
+
+    # NaNを除去
+    f0_1 = f0_1[~np.isnan(f0_1)]
+    f0_2 = f0_2[~np.isnan(f0_2)]
+
+    # 時系列データを3つに分割して評価
+    n_parts = 3
+
+    pitch_distances = []
+    intonation_distances = []
+
+    segments1_pitch = split_data(f0_1, n_parts) # Split pitch data
+    segments1_intonation = split_data(rms_1, n_parts) # Split intonation data
+
+    _, path_pitch = calculate_dtw_similarity(f0_1, f0_2)
+    _, path_intonation = calculate_dtw_similarity(rms_1, rms_2)
+
+    segments2_pitch = split_data_by_dtw_path(path_pitch, n_parts, f0_2)
+    segments2_intonation = split_data_by_dtw_path(path_intonation, n_parts, rms_2)
+
+    for i in range(n_parts):
+        distance_pitch, _ = calculate_dtw_similarity(segments1_pitch[i], segments2_pitch[i])
+        distance_intonation, _ = calculate_dtw_similarity(segments1_intonation[i], segments2_intonation[i])
+
+        pitch_distances.append(distance_pitch)
+        intonation_distances.append(distance_intonation)
+
+    pitch_similarities = [calculate_similarity(d, max(pitch_distances)) for d in pitch_distances]
+    intonation_similarities = [calculate_similarity(d, max(intonation_distances)) for d in intonation_distances]
+
+    return pitch_similarities,intonation_similarities
+
+
+    segments = ["序盤", "中盤", "終盤"]
+
+
+    # --- Generate feedback ---
+    min_pitch_index = pitch_similarities.index(min(pitch_similarities))
+    min_intonation_index = intonation_similarities.index(min(intonation_similarities))
+
+    min_pitch_similarity = min(pitch_similarities)
+    min_intonation_similarity = min(intonation_similarities)
+
+    if min_pitch_similarity > 0.9 and min_intonation_similarity > 0.9:
+        print("ほぼ完璧です！")
+    elif min_pitch_similarity > 0.7 and min_intonation_similarity > 0.7:
+        print("かなり似ています！")
+    elif min_pitch_similarity > 0.5 and min_intonation_similarity > 0.5:
+        print("悪くないですね。")
+    elif min_pitch_similarity > 0.3 and min_intonation_similarity > 0.3:
+        print("あまり似ていません。")
+    else:
+        print("似ていません。")
+    if min_pitch_similarity < min_intonation_similarity:
+        print(f" 特に {segments[min_pitch_index]} の音高に修正が必要です。")
+    else:
+        print(f"特に {segments[min_intonation_index]} のボリュームに修正が必要です。")
